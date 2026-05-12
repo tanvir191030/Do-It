@@ -4,7 +4,7 @@ import { getTodayLocal } from './dateUtils';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'google/gemini-2.0-flash-001';
 
-// Inbuilt API Key provided by user
+// Get API key from environment variable (set in Vercel)
 const BUILTIN_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
 
 async function callAI(prompt: string): Promise<string> {
@@ -26,7 +26,7 @@ async function callAI(prompt: string): Promise<string> {
           },
           { role: 'user', content: prompt },
         ],
-        temperature: 0.1, // Lower temperature for more consistent JSON
+        temperature: 0.1,
         max_tokens: 1000,
         response_format: { type: "json_object" }
       }),
@@ -101,7 +101,7 @@ CRITICAL RULES:
       console.error('AI parse error:', e);
       return {
         title: input,
-        dueDate: today,  // Default to today
+        dueDate: today,
         priority: 'medium' as Priority,
         category: 'personal' as TaskCategory,
       };
@@ -133,7 +133,6 @@ RULES:
       const subs = parsed.subtasks || [];
       
       if (!Array.isArray(subs) || subs.length === 0) {
-        // Generate fallback subtasks
         return [
           { id: `sub_${Date.now()}_0`, title: `Plan: ${taskTitle}`, completed: false },
           { id: `sub_${Date.now()}_1`, title: `Start: ${taskTitle}`, completed: false },
@@ -148,7 +147,6 @@ RULES:
       }));
     } catch (e) {
       console.error('Subtask generation error:', e);
-      // Fallback subtasks
       return [
         { id: `sub_${Date.now()}_0`, title: `Plan: ${taskTitle}`, completed: false },
         { id: `sub_${Date.now()}_1`, title: `Start working on ${taskTitle}`, completed: false },
