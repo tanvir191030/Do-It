@@ -5,12 +5,21 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,         // Always save session to storage
-    autoRefreshToken: true,       // Auto refresh before expiry
-    detectSessionInUrl: false,    // Not using OAuth redirects
-    storage: localStorage,        // Use browser localStorage
-    storageKey: 'sb-doit-auth',   // Unique key so it never conflicts
-  },
-});
+// Prevent app from crashing if keys are missing during development or initial deployment
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('Supabase credentials missing! Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.');
+}
+
+export const supabase = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co', 
+  SUPABASE_ANON_KEY || 'placeholder', 
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storage: localStorage,
+      storageKey: 'sb-doit-auth',
+    },
+  }
+);

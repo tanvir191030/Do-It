@@ -7,6 +7,10 @@ const MODEL = 'google/gemini-2.0-flash-001';
 // Get API key from environment variable (set in Vercel)
 const BUILTIN_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
 
+if (!BUILTIN_API_KEY) {
+  console.warn('OpenRouter API Key missing! AI features will not work until you add VITE_OPENROUTER_API_KEY to your environment variables.');
+}
+
 async function callAI(prompt: string): Promise<string> {
   try {
     const response = await fetch(OPENROUTER_URL, {
