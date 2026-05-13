@@ -137,7 +137,9 @@ export const useStore = create<AppState>((set, get) => ({
   deletedTaskBuffer: null,
 
   init: async () => {
-    // Step 1: Apply saved theme immediately (no network needed)
+    try {
+      // Step 1: Apply saved theme immediately (no network needed)
+
     try {
       const savedTheme = localStorage.getItem('doit-theme');
       if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
@@ -213,11 +215,14 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
 
+    } catch (err) {
+      console.error('[Init] Initialization error:', err);
     } finally {
       set({ isLoading: false });
       await get().resetDailyTasks();
     }
   },
+
 
 
   setView: (v) => set({ view: v }),
