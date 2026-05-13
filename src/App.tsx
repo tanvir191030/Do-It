@@ -64,7 +64,9 @@ function AppContent() {
   useEffect(() => {
     init();
     notifications.requestPermission();
+  }, [init]); // Only run once on mount (init is stable)
 
+  useEffect(() => {
     // Check for incomplete tasks every hour
     const checkIncomplete = setInterval(() => {
       const incomplete = tasks.filter(t => (t.dueDate === getTodayLocal() || t.recurring) && !t.completed);
@@ -74,19 +76,16 @@ function AppContent() {
     }, 3600000);
 
     return () => clearInterval(checkIncomplete);
-  }, [init, tasks]);
+  }, [tasks]);
 
   useEffect(() => {
     if (!isLoading) {
-      // Request notification permission
-      notifications.requestPermission();
-      
       const activeTasks = tasks.filter(t => !t.completed);
-      
       // Schedule ALL alarms (persistent until dismissed)
       scheduleAllAlarms(activeTasks);
     }
-  }, [isLoading, tasks, authStatus]);
+  }, [isLoading, tasks]);
+
 
   // Show loading screen while checking session
   if (isLoading) return <LoadingScreen />;

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Task, Priority, TaskCategory, CATEGORIES, PRIORITY_CONFIG, THEMES, ThemeName } from '../types';
@@ -78,7 +79,8 @@ export function ProgressRing({ progress, size = 80, strokeWidth = 6 }: { progres
 }
 
 // ─── Header ───
-export function Header() {
+export const Header = memo(function Header() {
+
   const { stats, settings, setShowAchievements, setShowAI, setShowPomodoro, user, setShowAuth } = useStore();
   const xpProgress = ((stats.xp % 200) / 200) * 100;
   
@@ -194,10 +196,12 @@ export function Header() {
       </div>
     </motion.header>
   );
-}
+});
+
 
 // ─── Bottom Navigation ───
-export function BottomNav() {
+export const BottomNav = memo(function BottomNav() {
+
   const { view, setView } = useStore();
   const items = [
     { id: 'list' as const, icon: LayoutList, label: 'Tasks' },
@@ -254,10 +258,12 @@ export function BottomNav() {
       </div>
     </nav>
   );
-}
+});
+
 
 // ─── Task Card ───
-export function TaskCard({ task }: { task: Task }) {
+export const TaskCard = memo(function TaskCard({ task }: { task: Task }) {
+
   const { toggleTask, deleteTask, setEditingTask, setShowAddTask, toggleSubtask } = useStore();
   const [showConfirm, setShowConfirm] = useState(false);
   const [expanded, _setExpanded] = useState(true);
@@ -436,7 +442,8 @@ export function TaskCard({ task }: { task: Task }) {
       </AnimatePresence>
     </>
   );
-}
+});
+
 
 // ─── Add/Edit Task Modal (moved to ./AddTaskModal.tsx) ───
 // @ts-ignore - kept for reference, do not use
@@ -943,7 +950,8 @@ export function _DeprecatedAddTaskModal() {
 }
 
 // ─── Floating Action Button ───
-export function FAB() {
+export const FAB = memo(function FAB() {
+
   const { setShowAddTask, setEditingTask } = useStore();
   return (
     <motion.button
@@ -960,10 +968,12 @@ export function FAB() {
       <Plus size={30} strokeWidth={3} />
     </motion.button>
   );
-}
+});
+
 
 // ─── Date Strip (swipeable horizontal date selector) ───
-function DateStrip({ selectedDate, onSelect, tasks }: { selectedDate: string; onSelect: (d: string) => void; tasks: Task[] }) {
+const DateStrip = memo(function DateStrip({ selectedDate, onSelect, tasks }: { selectedDate: string; onSelect: (d: string) => void; tasks: Task[] }) {
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const todayStr = getTodayLocal();
 
@@ -1050,7 +1060,8 @@ function DateStrip({ selectedDate, onSelect, tasks }: { selectedDate: string; on
       })}
     </div>
   );
-}
+});
+
 
 // ─── Task List View ───
 export function TaskListView() {
@@ -1238,7 +1249,8 @@ export function TaskListView() {
 }
 
 // ─── Filter Pill ──
-function FilterPill({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon?: string }) {
+const FilterPill = memo(function FilterPill({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon?: string }) {
+
   return (
     <motion.button
       whileTap={{ scale: 0.94 }}
@@ -1262,7 +1274,8 @@ function FilterPill({ active, onClick, label, icon }: { active: boolean; onClick
       <span style={{ color: active ? '#ffffff' : undefined }}>{label}</span>
     </motion.button>
   );
-}
+});
+
 
 // ─── Calendar View ───
 export function CalendarView() {

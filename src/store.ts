@@ -94,6 +94,10 @@ const defaultStats: UserStats = {
 
 // Supabase Sync Helpers
 async function pushTaskToCloud(task: Task, userId: string, operation: 'insert' | 'update' | 'delete') {
+  if (!navigator.onLine) {
+    await db.addPendingSync({ type: 'tasks', operation, data: task });
+    return;
+  }
   try {
     if (operation === 'delete') {
       await supabase.from('tasks').delete().eq('id', task.id).eq('user_id', userId);
@@ -104,8 +108,11 @@ async function pushTaskToCloud(task: Task, userId: string, operation: 'insert' |
     }
   } catch (e) {
     console.warn('Cloud sync warning:', e);
+    // Queue for later if it failed due to network
+    await db.addPendingSync({ type: 'tasks', operation, data: task });
   }
 }
+
 
 export const useStore = create<AppState>((set, get) => ({
   tasks: [],
@@ -150,58 +157,49 @@ export const useStore = create<AppState>((set, get) => ({
     // Apply local data right away so the app feels instant
     set({ tasks: localTasks, stats: localStats, settings: localSettings });
 
-    // Step 3: Register auth listener BEFORE checking session
-    // This ensures we never miss an auth event
+    // Step 3: Register auth listener & Network listeners
+    window.addEventListener('online', () => set({ isOnline: true }));
+    window.addEventListener('offline', () => set({ isOnline: false }));
+
     auth.onAuthStateChange((event, session) => {
-      console.log('[Auth] Event:', event, '| User:', session?.user?.email || 'none');
       if (event === 'SIGNED_OUT') {
         set({ user: null, authStatus: 'unauthenticated' });
       } else if (session?.user) {
-        // SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION
         set({ user: session.user, authStatus: 'authenticated' });
       }
     });
 
-    // Step 4: Check session (reads from localStorage - no network call needed)
+    // Step 4: Check session with safety timeout
     let session = null;
     try {
-      session = await auth.getSession();
+      // Race session check against a 5s timeout to prevent hanging on bad WiFi
+      session = await Promise.race([
+        auth.getSession(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 5000))
+      ]) as any;
     } catch (e) {
-      console.warn('[Auth] getSession failed:', e);
+      console.warn('[Auth] session check failed or timed out:', e);
     }
 
     if (session?.user) {
-      // ✅ User is logged in
-      set({
-        user: session.user,
-        authStatus: 'authenticated',
-        isLoading: false,
-      });
-
-      // Sync cloud data in background (non-blocking)
-      const userId = session.user.id;
-      (async () => {
-        try {
-          const { data: cloudTasks } = await supabase
-            .from('tasks')
-            .select('*')
-            .eq('user_id', userId);
-          if (cloudTasks && cloudTasks.length > 0) {
-            await db.saveTasks(cloudTasks as Task[]);
-            set({ tasks: cloudTasks as Task[] });
-          }
-        } catch (e) {
-          console.warn('[Sync] Cloud sync skipped:', e);
-        }
-      })();
+      set({ user: session.user, authStatus: 'authenticated', isLoading: false });
+      
+      // Background Sync
+      if (navigator.onLine) {
+        (async () => {
+          try {
+            const { data: cloudTasks } = await supabase.from('tasks').select('*').eq('user_id', session.user.id);
+            if (cloudTasks) {
+              await db.saveTasks(cloudTasks as Task[]);
+              set({ tasks: cloudTasks as Task[] });
+            }
+          } catch {}
+        })();
+      }
     } else {
-      // ❌ No session found - user needs to login
-      set({
-        user: null,
-        authStatus: 'unauthenticated',
-        isLoading: false,
-      });
+      set({ user: null, authStatus: 'unauthenticated', isLoading: false });
     }
+
 
     await get().resetDailyTasks();
   },
