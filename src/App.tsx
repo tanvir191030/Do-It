@@ -64,7 +64,17 @@ function AppContent() {
   useEffect(() => {
     init();
     notifications.requestPermission();
-  }, [init]); // Only run once on mount (init is stable)
+
+    // 🚨 ULTIMATE SAFETY NET:
+    // If the app is still loading after 2.5 seconds (due to blocked WiFi, DNS hangs, or storage issues),
+    // force it to show the UI. This ensures the user NEVER gets stuck on the loading screen.
+    const timer = setTimeout(() => {
+      useStore.setState({ isLoading: false });
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [init]);
+
 
   useEffect(() => {
     // Check for incomplete tasks every hour

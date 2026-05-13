@@ -155,11 +155,22 @@ export const useStore = create<AppState>((set, get) => ({
     } catch {}
 
     // Apply local data right away so the app feels instant
-    set({ tasks: localTasks, stats: localStats, settings: localSettings });
+    set({ 
+      tasks: localTasks, 
+      stats: localStats, 
+      settings: localSettings,
+      isLoading: false // 🚀 CRITICAL: Set to false immediately so the app shows local data while network checks happen
+    });
+
 
     // Step 3: Register auth listener & Network listeners
-    window.addEventListener('online', () => set({ isOnline: true }));
+    window.addEventListener('online', () => {
+      set({ isOnline: true });
+      // Trigger background sync when back online
+      get().syncPendingItems();
+    });
     window.addEventListener('offline', () => set({ isOnline: false }));
+
 
     auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
@@ -169,23 +180,24 @@ export const useStore = create<AppState>((set, get) => ({
       }
     });
 
-    // Step 4: Check session with safety timeout
+    // Step 4: Check session with a very aggressive timeout
     let session = null;
     try {
-      // Race session check against a 5s timeout to prevent hanging on bad WiFi
+      // 1.5s timeout is enough for a session check (which is usually local-first in Supabase)
       session = await Promise.race([
         auth.getSession(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 5000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 1500))
       ]) as any;
     } catch (e) {
-      console.warn('[Auth] session check failed or timed out:', e);
+      console.warn('[Auth] session check skipped or timed out:', e);
     }
 
     if (session?.user) {
-      set({ user: session.user, authStatus: 'authenticated', isLoading: false });
+      set({ user: session.user, authStatus: 'authenticated' });
       
-      // Background Sync
+      // Background Sync - only if we have actual connectivity
       if (navigator.onLine) {
+
         (async () => {
           try {
             const { data: cloudTasks } = await supabase.from('tasks').select('*').eq('user_id', session.user.id);
@@ -540,7 +552,34 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  syncPendingItems: async () => {
+    if (!navigator.onLine || get().authStatus !== 'authenticated') return;
+    const userId = get().user?.id;
+    if (!userId) return;
+
+    try {
+      const pending = await db.getPendingSync();
+      if (pending.length === 0) return;
+
+      console.log(`[Sync] Processing ${pending.length} pending items...`);
+      for (const item of pending) {
+        try {
+          if (item.type === 'tasks') {
+            await pushTaskToCloud(item.data, userId, item.operation as any);
+          }
+          await db.removePendingSync(item.id!);
+        } catch (e) {
+          console.warn('[Sync] Item failed, will retry later:', e);
+        }
+      }
+      console.log('[Sync] Done.');
+    } catch (e) {
+      console.error('[Sync] Failed to process pending queue:', e);
+    }
+  },
+
   logout: async () => {
+
     await auth.signOut();
     set({ user: null, authStatus: 'unauthenticated' });
     // Clear local data on logout for privacy
