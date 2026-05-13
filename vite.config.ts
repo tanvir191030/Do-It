@@ -15,7 +15,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logo.png', 'favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: ['logo.png'],
+
       manifest: {
         name: 'Do-It | AI Productivity',
         short_name: 'Do-It',
@@ -37,7 +38,8 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,png,svg}'],
+
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
