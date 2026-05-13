@@ -213,8 +213,12 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
 
-    await get().resetDailyTasks();
+    } finally {
+      set({ isLoading: false });
+      await get().resetDailyTasks();
+    }
   },
+
 
   setView: (v) => set({ view: v }),
   setShowAddTask: (s) => set({ showAddTask: s }),

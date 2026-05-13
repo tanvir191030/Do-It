@@ -5,7 +5,12 @@ import "./index.css";
 import App from "./App";
 
 // Register Service Worker for offline support
-registerSW({ immediate: true });
+try {
+  registerSW({ immediate: true });
+} catch (e) {
+  console.warn('SW registration skipped:', e);
+}
+
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

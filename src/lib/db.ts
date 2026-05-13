@@ -19,8 +19,8 @@ export const db = {
 
   async saveTasks(tasks: Task[]): Promise<void> {
     await localforage.setItem(TASKS_KEY, tasks);
-    this.addPendingSync({ type: 'tasks', data: tasks });
   },
+
 
   async getStats(): Promise<UserStats | null> {
     return await localforage.getItem<UserStats>(STATS_KEY);
